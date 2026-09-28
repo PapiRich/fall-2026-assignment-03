@@ -7,6 +7,10 @@ import{
 
 }from '../dal/tickets.js';
 import{authMiddleware} from '../middleware/auth.js';
+import {
+  insertTimeLog,
+  getTotalHoursForTicket,
+} from '../dal/timeLogs.js';
 
 const router = Router();
 
@@ -32,6 +36,43 @@ router.get('/',async(req,res) => {
         status,
     });
     res.json(tickets);
+});
+// POST /tickets/:id/time
+router.post('/:id/time', authMiddleware, async (req, res) => {
+    const ticketId = Number(req.params.id);
+    const userId = res.locals.userId;
+    const { hours } = req.body;
+
+    if (!Number.isInteger(ticketId) || ticketId <= 0) {
+        res.status(400).json({ error: 'Invalid ticket ID' });
+        return;
+    }
+
+    if (typeof hours !== 'number' || hours <= 0) {
+        res.status(400).json({ error: 'Invalid hours' });
+        return;
+    }
+
+    const timeLog = await insertTimeLog(ticketId, userId, hours);
+
+    res.status(201).json(timeLog);
+});
+
+// GET /tickets/:id/time
+router.get('/:id/time', async (req, res) => {
+    const ticketId = Number(req.params.id);
+
+    if (!Number.isInteger(ticketId) || ticketId <= 0) {
+        res.status(400).json({ error: 'Invalid ticket ID' });
+        return;
+    }
+
+    const totalHours = await getTotalHoursForTicket(ticketId);
+
+    res.status(200).json({
+        ticket_id: ticketId,
+        total_hours: totalHours,
+    });
 });
 router.get('/:id',async(req,res) => {
     const id = Number(req.params.id);
